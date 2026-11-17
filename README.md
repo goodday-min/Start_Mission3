@@ -142,7 +142,7 @@ python main.py
 
 > 프로그램을 실행하면 다음 메뉴가 나타난다.
 
-![alt text](image.png)
+<img src="image.png" alt="alt text" width="600" height="180">
 
 ``` text
 === Mini NPU Simulator ===
@@ -161,7 +161,8 @@ python main.py
 
 필터 2가지, 패턴 1가지 입력 - 한 줄에 3개의 숫자를 공백으로 구분해서 입력
 
-![alt text](image-1.png)
+<img src="image-1.png" alt="alt text" width="400" height="500">
+
 
 ``` text
 필터 A
@@ -187,8 +188,6 @@ python main.py
 입력 없이 자동으로 필터 로드(data.json) → 패턴 분석 → 성능 분석 → 결과 요약 순서로 진행
 
 ![alt text](image-2.png)
-
-
 
 ## 5. 코드 구성과 핵심 기능
 
@@ -291,7 +290,6 @@ def input_matrix(self, title, size=3):
 ```
 
 ![alt text](image-3.png)
-
 
 
 ### 5-4. 라벨을 통일하는 `normalize_label()` 함수 : 라벨 정규화
