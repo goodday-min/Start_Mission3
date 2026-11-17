@@ -201,10 +201,11 @@ python main.py
 | `DataManager` | 배열 저장·조회, 입력 처리, JSON 로드, 라벨 통일 | `store_matrix()`, `get_matrix()`, `input_matrix()`, `load_json()`, `normalize_label()` |
 | `NPUSimulator` | 메뉴와 실행 순서 관리, 패턴 분석, 결과 출력 | `run()`, `run_mode1()`, `run_mode2()`, `analyze_pattern()` |
 
-NPUSimulator ──(계산 요청)──▶ MACEngine
-      │
-      └────(데이터 요청)───▶ DataManager ──▶ data.json
-
+        
+        NPUSimulator ──(계산 요청)──▶ MACEngine
+              │
+              └────(데이터 요청)───▶ DataManager ──▶ data.json
+        
 
 ### 5-1. MAC 점수를 계산하는 `mac()` 함수 : MACEngine.mac()
 
