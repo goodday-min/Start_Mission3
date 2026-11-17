@@ -78,10 +78,10 @@ MAC은 Multiply(곱하기)와 Accumulate(누적해서 더하기)를 합친 말�
 
 NPU(Neural Processing Unit)는 인공지능 연산을 빠르게 처리하기 위해
 만들어진 전용 프로세서다. AI는 많은 데이터에 대해 곱셈과 덧셈을 반복하기
-때문에 이러한 연산을 효율적으로 처리하는 장치가 필요하다.
+때문에 이러한 연산을 효율적으로 처리하는 장치가 필요하다.   
+💡 수천 개의 MAC을 동시에(병렬) 처리하도록 만든 AI 전용 칩이 NPU
 
-이번 프로그램은 실제 NPU 칩을 만드는 것이 아니라, NPU가 활용하는 MAC
-연산의 기본 원리를 작은 규모로 흉내 내는 시뮬레이터다.
+이번 프로그램은 NPU가 활용하는 그 핵심 원리(MAC)를 **반복문**으로 직접 흉내 내는 시뮬레이터다.
 
 ### 3-4. 라벨 정규화
 
@@ -119,9 +119,9 @@ if abs(score_a - score_b) < self.EPSILON:
 
 ### 4-1. 준비 사항
 
--   Python 3.8 이상
+-   Python 3.8 이상, 표준 라이브러리(`json`, `time`)만 사용 (NumPy 등 금지)
 -   `main.py`
--   JSON 분석 모드를 사용할 경우 `data.json`
+-   JSON 분석 모드를 사용할 경우 `data.json` 
 
 `main.py`와 `data.json`을 같은 폴더에 둔다.
 
@@ -136,7 +136,13 @@ python main.py
 
 ### 4-3. 실행 모드 선택
 
-프로그램을 실행하면 다음 메뉴가 나타난다.
+- 모드 1 (사용자 입력): 3×3 필터 2개(A, B)와 패턴을 직접 입력 → MAC 점수·시간·판정 출력 
+- 모드 2 (json 파일): `data.json`의 5×5 / 13×13 / 25×25 필터·패턴을 일괄 판정 → PASS/FAIL, 성능표, 결과 요약 
+
+
+> 프로그램을 실행하면 다음 메뉴가 나타난다.
+
+![alt text](image.png)
 
 ``` text
 === Mini NPU Simulator ===
@@ -153,7 +159,9 @@ python main.py
 
 ### 4-4. 사용자 입력 예시
 
-십자가 필터와 X 필터를 입력하고, X 모양 패턴을 입력하는 예시다.
+필터 2가지, 패턴 1가지 입력 - 한 줄에 3개의 숫자를 공백으로 구분해서 입력
+
+![alt text](image-1.png)
 
 ``` text
 필터 A
@@ -174,6 +182,14 @@ python main.py
 
 이 경우 패턴은 필터 B와 더 비슷하므로 B의 점수가 더 높게 나온다.
 
+### 4-5. json 파일 입력 예시
+
+입력 없이 자동으로 필터 로드(data.json) → 패턴 분석 → 성능 분석 → 결과 요약 순서로 진행
+
+![alt text](image-2.png)
+
+
+
 ## 5. 코드 구성과 핵심 기능
 
 프로그램은 역할에 따라 세 개의 클래스로 나누어 작성했다. 계산, 데이터
@@ -185,7 +201,12 @@ python main.py
 | `DataManager` | 배열 저장·조회, 입력 처리, JSON 로드, 라벨 통일 | `store_matrix()`, `get_matrix()`, `input_matrix()`, `load_json()`, `normalize_label()` |
 | `NPUSimulator` | 메뉴와 실행 순서 관리, 패턴 분석, 결과 출력 | `run()`, `run_mode1()`, `run_mode2()`, `analyze_pattern()` |
 
-### 5-1. MAC 점수를 계산하는 `mac()` 함수
+NPUSimulator ──(계산 요청)──▶ MACEngine
+      │
+      └────(데이터 요청)───▶ DataManager ──▶ data.json
+
+
+### 5-1. MAC 점수를 계산하는 `mac()` 함수 : MACEngine.mac()
 
 ``` python
 def mac(self, pattern_list, filter_list):
@@ -198,6 +219,7 @@ def mac(self, pattern_list, filter_list):
 
     return total
 ```
+💡이중 for 문으로 모든 칸(N×N)을 한 번씩 돌며 곱한 값을 total 에 쌓습니다.
 
 **코드 이해하기**
 
@@ -211,7 +233,9 @@ def mac(self, pattern_list, filter_list):
 즉, 이중 반복문으로 2차원 배열의 모든 위치를 확인하면서 MAC 연산을
 수행한다. 이 함수가 프로그램에서 가장 핵심적인 계산 기능을 담당한다.
 
-### 5-2. 두 점수를 비교하는 `compare_scores()` 함수
+
+
+### 5-2. 두 점수를 비교하는 `compare_scores()` 함수 : (epsilon 정책)
 
 ``` python
 def compare_scores(self, score_a, score_b):
@@ -226,7 +250,8 @@ def compare_scores(self, score_a, score_b):
 `TIE`를 반환한다. 동점이 아니면 더 높은 점수를 가진 쪽인 A 또는 B를
 반환한다.
 
-### 5-3. 입력값을 검사하는 `parse_row()` 함수
+### 5-3. 입력값을 검사하는 `parse_row()` 함수 : 입력 검증  
+
 
 ``` python
 def parse_row(self, line, size):
@@ -249,9 +274,30 @@ def parse_row(self, line, size):
 발생한다. `input_matrix()`에서는 이 오류를 잡아서 안내 문구를 출력하고
 다시 입력받는다.
 
-### 5-4. 라벨을 통일하는 `normalize_label()` 함수
+``` python
+def input_matrix(self, title, size=3):
+    
+    print("%s (%d줄 입력, 공백 구분)" % (title, size))
+    matrix_list = []
+    
+    while len(matrix_list) < size:ㄴ
+        line = input()
+        try:
+            matrix_list.append(self.parse_row(line, size))
+        except ValueError:
+            print("입력 형식 오류: 각 줄에 %d개의 숫자를 공백으로 구분해 입력하세요." % size)
+    return matrix_list
+```
+
+![alt text](image-3.png)
+
+
+
+### 5-4. 라벨을 통일하는 `normalize_label()` 함수 : 라벨 정규화
 
 ``` python
+LABEL_TABLE = {"+": "Cross", "CROSS": "Cross", "X": "X"}
+
 def normalize_label(self, raw):
     key = str(raw).strip().upper()
 
@@ -261,14 +307,20 @@ def normalize_label(self, raw):
     return self.LABEL_TABLE[key]
 ```
 
-입력된 라벨의 앞뒤 공백을 제거하고 대문자로 바꾼 다음, 미리 만들어 둔
-`LABEL_TABLE`에서 표준 라벨을 찾는다.
+>입력된 라벨의 앞뒤 공백을 제거하고 대문자로 바꾼 다음, 미리 만들어 둔
+>`LABEL_TABLE`에서 표준 라벨을 찾는다.
 
-예를 들어 `cross`, `CROSS`, `+`는 모두 `Cross`로 통일되고, `x`는 `X`로
-통일된다. 표준 라벨로 통일하면 데이터의 표현 방식이 달라도 정확하게
-비교할 수 있다.
+>예를 들어 `cross`, `CROSS`, `+`는 모두 `Cross`로 통일되고, `x`는 `X`로
+>통일된다. 표준 라벨로 통일하면 데이터의 표현 방식이 달라도 정확하게
+>비교할 수 있다.
 
-### 5-5. JSON 데이터를 분석하는 `analyze_pattern()` 함수
+>번역표에 없는 값은 ValueError 를 일으켜 그 케이스만 FAIL 처리합니다.
+
+### 5-5. JSON 데이터를 분석하는 `analyze_pattern()` 함수 : 패턴 1개 판정  
+
+키에서 N 추출 → Cross/X 필터 선택 → 크기 검증
+   → 각 필터와 MAC → epsilon 비교 → Cross / X / UNDECIDED
+   → expected 도 표준 라벨로 통일 → 같으면 PASS, 다르면 FAIL
 
 ``` python
 size = self.datamanager.extract_size(key)
@@ -309,10 +361,10 @@ def measure_time(self, pattern_list, filter_list, repeat=10):
 
     for i in range(repeat):
         start = time.perf_counter()
-        self.mac(pattern_list, filter_list)
+        self.mac(pattern_list, filter_list)         # 이 구간만 잰다
         total_seconds += time.perf_counter() - start
 
-    return total_seconds / repeat * 1000
+    return total_seconds / repeat * 1000            # 초 → ms
 ```
 
 MAC 연산을 기본 10회 반복하면서 걸린 시간을 측정한다.
@@ -322,10 +374,12 @@ MAC 연산을 기본 10회 반복하면서 걸린 시간을 측정한다.
 마지막에 초 단위의 시간을 밀리초(ms)로 바꾸어 반환한다. 입력이나 출력,
 파일 읽기 시간은 측정에 포함하지 않는다.
 
-## 6. 오류 처리와 예외 상황
+
+## 6. 오류 처리와 예외 상황 : try/except
 
 프로그램이 잘못된 데이터 때문에 갑자기 종료되지 않도록 여러 검사를
 넣었다.
+
 
 | 상황 | 처리 방법 |
 | --- | --- |
@@ -336,6 +390,15 @@ MAC 연산을 기본 10회 반복하면서 걸린 시간을 측정한다.
 | 패턴과 필터의 크기가 다름 | 해당 케이스를 실패 처리 |
 | 알 수 없는 라벨 | 해당 케이스를 실패 처리 |
 | 두 점수가 허용오차 안에서 같음 | `UNDECIDED`로 판정 |
+
+``` python
+for key, case_dict in pattern_dict.items():
+    try:
+        reason = self.analyze_pattern(key, case_dict)
+    except ValueError as error:   ...   # 크기/라벨/키 형식 문제
+    except KeyError as error:     ...   # 필요한 필터/항목 없음
+    except TypeError:             ...   # 값 형식 이상
+```
 
 특히 JSON 분석 모드에서는 케이스마다 예외 처리를 하기 때문에 한 케이스에
 문제가 생겨도 가능한 한 다음 케이스의 분석을 계속할 수 있다.
@@ -391,19 +454,15 @@ O(N²)**를 가진다.
 마지막에는 전체 테스트 수, 통과 수, 실패 수와 실패한 케이스의 이름 및
 이유가 요약된다.
 
-실제 `data.json` 실행 결과를 확인한 뒤 아래 표를 채운다.
+![alt text](image-4.png)
 
 | 항목 | 실행 결과 |
 | --- | --- |
-| 총 테스트 | (실행 결과 입력) |
-| 통과 | (실행 결과 입력) |
-| 실패 | (실행 결과 입력) |
-| 실패 케이스 및 사유 | (실행 결과 입력 또는 없음) |
+| 총 테스트 | 6 |
+| 통과 | 3 |
+| 실패 | 3 |
+| 실패 케이스 및 사유 | 동점(UNDECIDED) 처리 규칙에 따라 FAIL |
 
-> 참고: 현재 제공된 파일에는 `main.py`와 과제 안내 PDF가 있으며, 실제
-> 테스트 데이터인 `data.json`과 실행 콘솔 결과는 포함되어 있지 않다.
-> 따라서 테스트 개수와 PASS/FAIL 수를 임의로 작성하지 않고 실제 실행 후
-> 기록하도록 했다.
 
 ### 8-2. 실패 원인 분석
 
@@ -426,23 +485,33 @@ O(N²)**를 가진다.
 데이터 형식이 잘못되었는지, 배열 크기가 맞는지, 라벨이 통일되었는지,
 동점 처리 기준에 해당하는지를 순서대로 확인해야 한다.
 
-### 8-3. 시간 복잡도 분석
+### 8-3. 성능 분석과 시간 복잡도 분석 O(N²)
 
 이번 프로그램에서 가장 많은 반복 계산이 일어나는 부분은 `MACEngine`
 클래스의 `mac()` 함수다. 이 함수는 행과 열을 각각 반복하는 이중 반복문을
 사용한다.
 
+
+- 측정 결과 (평균/10회, 한 번 실행한 값)
+
+| 크기 | 평균 시간(ms) | 연산 횟수(N²) | 3×3 대비 연산량 |
+|---|---|---|---|
+| 3×3 | 0.001 | 9 | 1배 |
+| 5×5 | 0.002 | 25 | 약 2.8배 |
+| 13×13 | 0.010 | 169 | 약 18.8배 |
+| 25×25 | 0.037 | 625 | 약 69.4배 |
+
 N×N 배열에서는 총 N²개의 위치를 확인하므로 연산 횟수는 N²에 비례한다.
 따라서 시간 복잡도는 O(N²)이다.
 
-3×3 배열은 9번, 5×5 배열은 25번, 13×13 배열은 169번, 25×25 배열은
+- 3×3 배열은 9번, 5×5 배열은 25번, 13×13 배열은 169번, 25×25 배열은
 625번의 위치별 곱셈과 누적 덧셈을 수행한다.
 
-배열 크기가 커질수록 계산해야 할 위치가 빠르게 늘어난다는 것을 확인할 수
+- 배열 크기가 커질수록 계산해야 할 위치가 빠르게 늘어난다는 것을 확인할 수
 있다. 이 때문에 실제 AI에서는 많은 MAC 연산을 효율적으로 처리하는 NPU가
 중요하다.
 
-프로그램에서 측정한 평균 시간은 `measure_time()` 함수가 10회 실행 시간을
+- 프로그램에서 측정한 평균 시간은 `measure_time()` 함수가 10회 실행 시간을
 더한 뒤 평균을 계산한 값이다. 측정 시간은 컴퓨터 환경에 따라 달라질 수
 있지만, 연산 횟수와 함께 비교하면 데이터 크기가 계산량에 미치는 영향을
 이해할 수 있다.
