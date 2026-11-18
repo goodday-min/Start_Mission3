@@ -159,9 +159,12 @@ python main.py
 
 ### 4-4. 사용자 입력 예시
 
+<img width="1266" height="891" alt="image" src="https://github.com/user-attachments/assets/b060bc7e-224a-4332-aef0-0e88bf7c9940" />
+
+
 필터 2가지, 패턴 1가지 입력 - 한 줄에 3개의 숫자를 공백으로 구분해서 입력
 
-<img src="image-1.png" alt="alt text" width="400" height="500">
+<img src="image-1.png" alt="alt text" width="320" height="400">
 
 
 ``` text
@@ -186,6 +189,10 @@ python main.py
 ### 4-5. json 파일 입력 예시
 
 입력 없이 자동으로 필터 로드(data.json) → 패턴 분석 → 성능 분석 → 결과 요약 순서로 진행
+
+<img width="1000" height="700" alt="image" src="https://github.com/user-attachments/assets/6659932b-101a-457f-8107-cb6ae454c9d8" />
+
+
 
 ![alt text](image-2.png)
 
